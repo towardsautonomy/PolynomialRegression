@@ -213,10 +213,10 @@ def train_model():
     y_plot = f(x_plot)
     y_pred = [model.forward(x.reshape(-1, 1)) for x in x_plot]
     y_pred = np.array(y_pred).reshape(-1, 1)
-    plt.plot(x_plot, y_plot, 'b-')
-    plt.plot(x_plot, y_pred, 'r-')
+    plt.plot(x_plot, y_plot, 'b-', linewidth=4)
+    plt.plot(x_plot, y_pred, 'r-', linewidth=4)
     plt.plot(X, y, 'ko')
-    plt.legend(['true model', 'predicted model', 'noisy data samples'])
+    plt.legend(['true model', 'predicted model', 'noisy data samples'], fontsize=20)
     plt.xlabel('X')
     plt.ylabel('y')
     plt.grid()
