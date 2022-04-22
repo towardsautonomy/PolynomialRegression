@@ -56,9 +56,18 @@ class PolynomialRegression(object):
         self.b1 = np.zeros((self.n_hidden, 1))
         self.W2 = np.random.normal(0, 0.1, (self.n_output, self.n_hidden))
         self.b2 = np.zeros((self.n_output, 1))
+        self.params = {'W1': self.W1, 'b1': self.b1, 'W2': self.W2, 'b2': self.b2}
+
+        # Gradients
+        self.grads = {key: np.zeros_like(self.params[key]) for key in self.params}
 
         # parameters for backprop
         self.cache = {}
+
+    def zero_grad(self):
+        """ Zero out the gradients.
+        """
+        self.grads = {key: np.zeros_like(self.params[key]) for key in self.params}
 
     def forward(self, X):
         """ Forward pass.
@@ -70,11 +79,11 @@ class PolynomialRegression(object):
             y_pred: numpy array of shape (n_samples, 1)
         """
         # Hidden layer
-        z1 = np.dot(self.W1, X) + self.b1
+        z1 = np.dot(self.params['W1'], X) + self.params['b1']
         a1 = np.tanh(z1)
 
         # Output layer
-        z2 = np.dot(self.W2, a1) + self.b2
+        z2 = np.dot(self.params['W2'], a1) + self.params['b2']
         y_pred = z2
 
         # store intermediate results for backprop
@@ -90,62 +99,49 @@ class PolynomialRegression(object):
 
         Args:
             y_true: numpy array of shape (n_samples, 1)
-
-        Returns:
-            grads: dictionary of gradients
         """
-        # Initialize gradients
-        grads = {}
-        grads['dW1'] = np.zeros_like(self.W1)
-        grads['db1'] = np.zeros_like(self.b1)
-        grads['dW2'] = np.zeros_like(self.W2)
-        grads['db2'] = np.zeros_like(self.b2)
-
         # Output layer gradients
         dz2 = 2 * (self.cache['z2'] - y_true)
-        grads['dW2'] = np.dot(dz2, self.cache['a1'].T)
-        grads['db2'] = np.sum(dz2, axis=1, keepdims=True)
+        self.grads['W2'] = np.dot(dz2, self.cache['a1'].T)
+        self.grads['b2'] = np.sum(dz2, axis=1, keepdims=True)
 
         # Hidden layer gradients
-        dz1 = np.dot(self.W2.T, dz2) * (1 - self.cache['a1']**2)
-        grads['dW1'] = np.dot(dz1, self.cache['X'].T)
-        grads['db1'] = np.sum(dz1, axis=1, keepdims=True)
+        dz1 = np.dot(self.params['W2'].T, dz2) * (1 - self.cache['a1']**2)
+        self.grads['W1'] = np.dot(dz1, self.cache['X'].T)
+        self.grads['b1'] = np.sum(dz1, axis=1, keepdims=True)
 
-        return grads
-
-    def update_params(self, grads, learning_rate=0.01):
+    def update_params(self, learning_rate=0.01):
         """ Update the parameters.
 
         Args:
-            grads: dictionary of gradients
             learning_rate: learning rate
         """
-        self.W1 -= learning_rate * grads['dW1']
-        self.b1 -= learning_rate * grads['db1']
-        self.W2 -= learning_rate * grads['dW2']
-        self.b2 -= learning_rate * grads['db2']
+        self.params = {key: self.params[key] - learning_rate * self.grads[key] for key in self.params}
 
-    def update_params_momentum(self, grads, learning_rate=0.01, momentum=0.9):
+    def update_params_momentum(self, learning_rate=0.01, momentum=0.9):
         """ Update the parameters with momentum.
 
         Args:
-            grads: dictionary of gradients
             learning_rate: learning rate
             momentum: momentum
         """
         if not hasattr(self, 'v'):
-            self.v = {}
-            self.v = {k: grads[k] for k, v in grads.items()}
+            self.v = {k: self.grads[k] for k, v in self.grads.items()}
 
-        self.v['dW1'] = momentum * self.v['dW1'] + (1 - momentum) * grads['dW1']
-        self.v['db1'] = momentum * self.v['db1'] + (1 - momentum) * grads['db1']
-        self.v['dW2'] = momentum * self.v['dW2'] + (1 - momentum) * grads['dW2']
-        self.v['db2'] = momentum * self.v['db2'] + (1 - momentum) * grads['db2']
+        self.v = {k: momentum * self.v[k] + (1 - momentum) * self.grads[k] for k, v in self.v.items()}
+        self.params = {key: self.params[key] - learning_rate * self.v[key] for key in self.params}
 
-        self.W1 -= learning_rate * self.v['dW1']
-        self.b1 -= learning_rate * self.v['db1']
-        self.W2 -= learning_rate * self.v['dW2']
-        self.b2 -= learning_rate * self.v['db2']
+    @property
+    def parameters(self):
+        """ Return the parameters.
+        """
+        return self.params
+
+    @property
+    def num_parameters(self):
+        """ Return the number of parameters.
+        """
+        return sum(np.prod(v.shape) for v in self.params.values())
 
     def fit(self, X, y, n_epochs=100, learning_rate=0.01,
             batch_size=1, verbose=False):
@@ -159,6 +155,17 @@ class PolynomialRegression(object):
             batch_size: batch size
             verbose: verbosity
         """
+        # print info
+        if verbose:
+            print('>>>>>>>>>>>>')
+            print('Training the model with following parameters:')
+            print(' - num of hidden layers: {}'.format(self.n_hidden))
+            print(' - num of epochs: {}'.format(n_epochs))
+            print(' - learning rate: {}'.format(learning_rate))
+            print(' - batch size: {}'.format(batch_size))
+            print(' - num of trainable parameters: {}'.format(self.num_parameters))
+            print('<<<<<<<<<<<<')
+            
         # Initialize loss
         loss = 0.0
 
@@ -184,39 +191,33 @@ class PolynomialRegression(object):
                 loss = L2Loss()(y_pred, y_batch)
 
                 # Backward pass
-                grads = self.backward(y_batch)
+                self.backward(y_batch)
 
                 # Update parameters
-                self.update_params_momentum(grads, learning_rate)
+                self.update_params_momentum(learning_rate)
 
             # Print loss
             if verbose:
                 pbar.set_description('Epoch %3d: loss = %.6f' % (epoch + 1, loss))
 
-def train_model():
+def train_model(X, y):
     """ Train the model.
     """
-    # generate data
-    n_samples = 1000
-    coeffs = [1.0, 7.5, -5.0, -1.0, 4.5, -7.0]
-    # polynomial function
-    f = lambda x: sum(coeffs[i] * x**i for i in range(len(coeffs)))
-    X, y = generate_data(f, noise_std=0.5, n_samples=n_samples)
-    
+    n_samples = X.shape[0]
     # train model
-    model = PolynomialRegression(n_hidden=10, n_output=1)
-    model.fit(X, y, n_epochs=50, learning_rate=0.007, batch_size=2, verbose=True)
+    model = PolynomialRegression(n_hidden=15, n_output=1)
+    model.fit(X, y, n_epochs=100, learning_rate=0.001, batch_size=5, verbose=True)
     
     # plot model
-    plt.figure(figsize=(20, 12))
+    plt.figure(figsize=(30, 16))
     x_plot = np.linspace(-1.0, 1.0, n_samples)
     y_plot = f(x_plot)
     y_pred = [model.forward(x.reshape(-1, 1)) for x in x_plot]
     y_pred = np.array(y_pred).reshape(-1, 1)
-    plt.plot(x_plot, y_plot, 'b-', linewidth=4)
-    plt.plot(x_plot, y_pred, 'r-', linewidth=4)
+    plt.plot(x_plot, y_plot, 'b-', linewidth=5)
+    plt.plot(x_plot, y_pred, 'r-', linewidth=5)
     plt.plot(X, y, 'ko')
-    plt.legend(['true model', 'predicted model', 'noisy data samples'], fontsize=20)
+    plt.legend(['true model', 'predicted model', 'noisy data samples'], fontsize=25)
     plt.xlabel('X')
     plt.ylabel('y')
     plt.grid()
@@ -226,4 +227,12 @@ def train_model():
 if __name__ == '__main__':
     # set random seed
     np.random.seed(25)
-    train_model()
+
+    # generate data
+    n_samples = 2500
+    coeffs = [1.0, 7.5, -5.0, -1.0, 4.5, -7.0]
+    # polynomial function
+    f = lambda x: sum(coeffs[i] * x**i for i in range(len(coeffs)))
+    X, y = generate_data(f, noise_std=1.0, n_samples=n_samples)
+
+    train_model(X, y)
