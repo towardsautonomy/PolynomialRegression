@@ -61,7 +61,7 @@ class PolynomialRegression(object):
         # Gradients
         self.grads = {key: np.zeros_like(self.params[key]) for key in self.params}
 
-        # parameters for backprop
+        # Intermediate parameters needed for backprop
         self.cache = {}
 
     def zero_grad(self):
@@ -86,7 +86,7 @@ class PolynomialRegression(object):
         z2 = np.dot(self.params['W2'], a1) + self.params['b2']
         y_pred = z2
 
-        # store intermediate results for backprop
+        # Store intermediate results for backprop
         self.cache['X'] = X
         self.cache['z1'] = z1
         self.cache['a1'] = a1
@@ -132,12 +132,6 @@ class PolynomialRegression(object):
         self.params = {key: self.params[key] - learning_rate * self.v[key] for key in self.params}
 
     @property
-    def parameters(self):
-        """ Return the parameters.
-        """
-        return self.params
-
-    @property
     def num_parameters(self):
         """ Return the number of parameters.
         """
@@ -165,7 +159,7 @@ class PolynomialRegression(object):
             print(' - batch size: {}'.format(batch_size))
             print(' - num of trainable parameters: {}'.format(self.num_parameters))
             print('<<<<<<<<<<<<')
-            
+
         # Initialize loss
         loss = 0.0
 
