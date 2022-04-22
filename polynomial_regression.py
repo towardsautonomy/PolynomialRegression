@@ -138,7 +138,7 @@ class PolynomialRegression(object):
         return sum(np.prod(v.shape) for v in self.params.values())
 
     def fit(self, X, y, n_epochs=100, learning_rate=0.01,
-            batch_size=1, verbose=False):
+            batch_size=1, verbose=False, desc='polynomial_regression'):
         """ Fit the model.
 
         Args:
@@ -153,6 +153,7 @@ class PolynomialRegression(object):
         if verbose:
             print('>>>>>>>>>>>>')
             print('Training the model with following parameters:')
+            print(' - description: {}'.format(desc))
             print(' - num of hidden layers: {}'.format(self.n_hidden))
             print(' - num of epochs: {}'.format(n_epochs))
             print(' - learning rate: {}'.format(learning_rate))
@@ -190,20 +191,24 @@ class PolynomialRegression(object):
                 # Update parameters
                 self.update_params_momentum(learning_rate)
 
-            # Print loss
-            if verbose:
-                pbar.set_description('Epoch %3d: loss = %.6f' % (epoch + 1, loss))
+            # Set progress bar description
+            pbar.set_description('Epoch %3d: loss = %.6f' % (epoch + 1, loss))
 
-def train_model(X, y):
+def train_model(X, y, desc='polynomial_regression'):
     """ Train the model.
     """
     n_samples = X.shape[0]
     # train model
     model = PolynomialRegression(n_hidden=15, n_output=1)
-    model.fit(X, y, n_epochs=100, learning_rate=0.001, batch_size=5, verbose=True)
+    model.fit(X, y, n_epochs=100, 
+                    learning_rate=0.001, 
+                    batch_size=5, 
+                    verbose=True, 
+                    desc=desc)
     
     # plot model
     plt.figure(figsize=(30, 16))
+    plt.suptitle(desc, fontsize=20)
     x_plot = np.linspace(-1.0, 1.0, n_samples)
     y_plot = f(x_plot)
     y_pred = [model.forward(x.reshape(-1, 1)) for x in x_plot]
@@ -215,18 +220,17 @@ def train_model(X, y):
     plt.xlabel('X')
     plt.ylabel('y')
     plt.grid()
-    plt.savefig('polynomial_regression.png')
+    plt.savefig(f'{desc}.png')
     plt.show()
 
 if __name__ == '__main__':
     # set random seed
     np.random.seed(25)
+    n_samples = 2500
 
     # generate data
-    n_samples = 2500
     coeffs = [1.0, 7.5, -5.0, -1.0, 4.5, -7.0]
     # polynomial function
     f = lambda x: sum(coeffs[i] * x**i for i in range(len(coeffs)))
     X, y = generate_data(f, noise_std=1.0, n_samples=n_samples)
-
-    train_model(X, y)
+    train_model(X, y, desc='polynomial_regression')
