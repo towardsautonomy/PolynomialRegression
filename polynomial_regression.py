@@ -152,9 +152,8 @@ class PolynomialRegression(object):
         # print info
         if verbose:
             print('>>>>>>>>>>>>')
-            print('Training the model with following parameters:')
-            print(' - description: {}'.format(desc))
-            print(' - num of hidden layers: {}'.format(self.n_hidden))
+            print('Training the \'{}\' model with following parameters:'.format(desc))
+            print(' - num of hidden units: {}'.format(self.n_hidden))
             print(' - num of epochs: {}'.format(n_epochs))
             print(' - learning rate: {}'.format(learning_rate))
             print(' - batch size: {}'.format(batch_size))
